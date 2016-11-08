@@ -1,0 +1,20 @@
+name: tdt
+channels:
+  - rdkit
+  - conda-forge
+  - defaults
+dependencies:
+  - python=2.7
+  - future
+  - numpy
+  - scipy
+  - pandas
+  - h5py
+  - joblib
+  - scikit-learn
+  - rdkit
+  - cython
+  - pip:
+    - argh
+    - submissions/santi/src
+    # - submissions/sereina  # will need to add setup.py / make packages
