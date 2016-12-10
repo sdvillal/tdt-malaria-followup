@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=2.7
+  - python=2.7  # We wrote our solution in py2, unfortunately
   - future
   - numpy
   - scipy
@@ -12,9 +12,15 @@ dependencies:
   - h5py
   - joblib
   - scikit-learn
-  - rdkit
   - cython
+  - rdkit
+  # so we can run sereina notebook
+  - jupyter
+  - matplotlib
+  # so we can run queries
+  - postgresql
+  - psycopg2
   - pip:
     - argh
-    - submissions/santi/src
-    # - submissions/sereina  # will need to add setup.py / make packages
+    - "--editable=./submissions/santi/src"  # weird syntax until https://github.com/conda/conda/pull/3969 is merged
+    # - submissions/sereina  # will need to add setup.py / make packages; it is mostly a notebook anyway
