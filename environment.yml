@@ -31,5 +31,5 @@ dependencies:
   - pytest-pep8
   - pip:
     - argh
-    - "--editable=./submissions/santi/src"  # weird syntax until https://github.com/conda/conda/pull/3969 is merged
+    - "--editable=./submissions/santi-modern/src"  # weird syntax until https://github.com/conda/conda/pull/3969 is merged
     # - submissions/sereina  # will need to add setup.py / make packages; it is mostly a notebook anyway
