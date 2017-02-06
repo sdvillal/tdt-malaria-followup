@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=2.7  # We wrote our solution in py2, unfortunately
+  - python=2.7  # We wrote our solution in py2, unfortunately (also Sereina)
   - future
   - numpy
   - scipy
@@ -14,12 +14,21 @@ dependencies:
   - scikit-learn
   - cython
   - rdkit
+  - argh
   # so we can run sereina notebook
   - jupyter
   - matplotlib
+  - pillow
+  # diffing notebooks
+  - nbdime
   # so we can run queries
-  - postgresql
+  # - postgresql  # It should not be difficult to allow automated installation of Chembl xxxx.x
+  - sqlalchemy
   - psycopg2
+  # testing
+  - pytest
+  - pytest-cov
+  - pytest-pep8
   - pip:
     - argh
     - "--editable=./submissions/santi/src"  # weird syntax until https://github.com/conda/conda/pull/3969 is merged
