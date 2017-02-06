@@ -1,0 +1,9 @@
+[submodule "submissions/sereina-bugfixed"]
+	path = submissions/sereina-bugfixed
+	url = https://github.com/sriniker/TDT-tutorial-2014.git
+[submodule "submissions/sereina-original"]
+	path = submissions/sereina-original
+	url = https://github.com/sriniker/TDT-tutorial-2014.git
+[submodule "submissions/sereina-modern"]
+	path = submissions/sereina-modern
+	url = https://github.com/sdvillal/TDT-tutorial-2014.git
