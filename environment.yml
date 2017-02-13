@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=2.7  # We wrote our solution in py2, unfortunately (also Sereina)
+  - python=3
   - future
   - numpy
   - scipy
@@ -19,6 +19,9 @@ dependencies:
   - jupyter
   - matplotlib
   - pillow
+  # so some plots are not ugly
+  - cairo
+  - cairosvg
   # diffing notebooks
   - nbdime
   # so we can run queries
