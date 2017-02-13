@@ -25,8 +25,24 @@ STJUDE_CSV = op.join(DATA_DIR, 'StJudeResults2016.csv')
 STJUDE_FLO_GREG_ANNOTATED_CSV = op.join(CHEMBL_FIRST_ANALYSIS_DIR, 'hits_malaria_screen_flo.csv')
 
 # Ground truth for the competition benchmarl dataset
-COMPETITION_GT_CSV = op.join(DATA_DIR, 'tdt2014_challenge1_mar3d7_heldoutdataandresults.txt')
+COMPETITION_GT_CSV = op.join(DATA_DIR, 'TDT_Malaria_HTS_ranked.csv')
+COMPETITION_GT_TSV = op.join(DATA_DIR, 'tdt2014_challenge1_mar3d7_heldoutdataandresults.txt')
 
-# Original munged data/ models / results from Flo and Santi
-CCL_RESULTS_DIR = op.join(SANTI_MODERN_DIR, 'original-data')
+# --- Original munged data/ models / results from Flo and Santi
 
+# Dir with the data as submitted (with minimal changes)
+CCL_DATA_DIR = op.join(SANTI_MODERN_DIR, 'data-original')
+# Original smiles files
+CCL_ORIGINAL_DATA_DIR = op.join(CCL_DATA_DIR, 'original')
+# Canonical ordering of molecules
+CCL_INDICES_DIR = op.join(CCL_DATA_DIR, 'indices')
+# Molecules catalog and features
+CCL_MOLCATALOGS_DIR = op.join(CCL_DATA_DIR, 'rdkit', 'mols')
+CCL_FINGERPRINTS_DIR = op.join(CCL_DATA_DIR, 'rdkit', 'ecfps')  # not really ECFPS
+CCL_FEATURES_DIR = op.join(CCL_DATA_DIR, 'rdkit', 'rdkfs')      # other features
+# Models, OOBs & cross-vals, submissions
+CCL_EXPERIMENTS_DIR = op.join(CCL_DATA_DIR, 'experiments')
+CCL_LOGREGS_EXPERIMENTS_DIR = op.join(CCL_EXPERIMENTS_DIR, 'logregs')
+CCL_TREES_EXPERIMENTS_DIR = op.join(CCL_EXPERIMENTS_DIR, 'trees')
+# Vowpal Wabbit experiments
+CCL_VOWPAL_DIR = op.join(CCL_DATA_DIR, 'vowpal')
