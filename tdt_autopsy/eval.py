@@ -7,7 +7,6 @@ import os.path as op
 
 from functools import partial
 
-import numpy as np
 import pandas as pd
 
 if PY3:
@@ -21,6 +20,14 @@ from tdt_autopsy.config import (COMPETITION_GT_CSV,
                                 CCL_EXPERIMENTS_DIR,
                                 CCL_LOGREGS_EXPERIMENTS_DIR,
                                 CCL_TREES_EXPERIMENTS_DIR, SEREINA_MODERN_DIR)
+
+
+def thunk_or_df(x):
+    if callable(x):
+        return thunk_or_df(x())
+    if not isinstance(x, pd.DataFrame):
+        raise ValueError('No dataframe after running lazy computation')
+    return x
 
 
 def read_benchmark_labels():
@@ -137,34 +144,45 @@ def score_result(scores=read_sg_moderner_scores,
                  actual=read_benchmark_labels,
                  dataset='competition-external',
                  model='sg-moderner-4096'):
-    # Strong contract of proper ordering...
-    # Maybe we should merge by index instead
-    if callable(actual):
-        actual = actual()
-    actual = actual.active.values
-    if callable(scores):
-        scores = scores()
-    scores = scores.score.values
 
-    # For rdkit Scoring API
-    actual_sorted = actual[np.argsort(scores)[::-1]].reshape(-1, 1)
+    # Run any lazy computation to get the actual dataframes
+    actual = thunk_or_df(actual)[['active']]
+    scores = thunk_or_df(scores)[['score']]
+
+    # --- Prepare ranking for rdkit Scoring API
+    # merge
+    merged = pd.merge(actual, scores, left_index=True, right_index=True)
+    assert len(merged) == len(actual)  # maybe we can relax this
+    # randomize
+    merged = merged.sample(frac=1, replace=False, random_state=0)
+    # sort
+    active_sorted = merged.sort_values('score', ascending=False)['active'].values.reshape(-1, 1)
 
     return dict(
         dataset=dataset,
         model=model,
-        auc=Scoring.CalcAUC(actual_sorted, 0),
-        enrichment_1=Scoring.CalcEnrichment(actual_sorted, 0, (0.01,))[0],
-        enrichment_5=Scoring.CalcEnrichment(actual_sorted, 0, (0.05,))[0],
-        enrichment_10=Scoring.CalcEnrichment(actual_sorted, 0, (0.1,))[0],
-        rie20=Scoring.CalcRIE(actual_sorted, 0, 20),
-        bedroc20=Scoring.CalcBEDROC(actual_sorted, 0, 20),
+        auc=Scoring.CalcAUC(active_sorted, 0),
+        enrichment_1=Scoring.CalcEnrichment(active_sorted, 0, (0.01,))[0],
+        enrichment_5=Scoring.CalcEnrichment(active_sorted, 0, (0.05,))[0],
+        enrichment_10=Scoring.CalcEnrichment(active_sorted, 0, (0.1,))[0],
+        rie20=Scoring.CalcRIE(active_sorted, 0, 20),
+        bedroc20=Scoring.CalcBEDROC(active_sorted, 0, 20),
     )
+
+
+def average_scores(a=read_sg_moderner_scores, b=read_ccl_logregs_scores):
+    a = thunk_or_df(a)
+    b = thunk_or_df(b)
+    c = a[['id', 'score']].copy()
+    c['score'] += b['score']
+    return c
 
 
 ALL_EXTERNAL_SCORES = dict(**CCL_FINAL_EXTERNAL_SCORES)
 ALL_EXTERNAL_SCORES.update(CCL_LOGREG_EXTERNAL_SCORES)
 ALL_EXTERNAL_SCORES.update(CCL_TREES_EXTERNAL_SCORES)
 ALL_EXTERNAL_SCORES.update(SG_EXTERNAL_SCORES)
+ALL_EXTERNAL_SCORES['ccl_sg_blend'] = average_scores
 
 
 if __name__ == '__main__':
