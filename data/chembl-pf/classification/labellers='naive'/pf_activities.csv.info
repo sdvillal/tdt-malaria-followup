@@ -1,0 +1,2 @@
+_activities2classes(labellers={'EC50':ec50_labeller(threshold_nM=2000),'IC50':ic50_labeller(threshold_nM=2000),'Inhibition':inhibition_labeller(threshold_pct=50),'Potency':potency_labeller(threshold_nM=2000),'XC50':xc50_labeller(threshold_nM=2000)},pct_active=1,pct_inactive=0)
+ChEMBLs: 17,20,22_1
