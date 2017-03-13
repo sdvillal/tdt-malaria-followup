@@ -169,7 +169,7 @@ def _activities2classes(df, labellers, pct_active=1, pct_inactive=0):
     # Look at cricket chorus for much more sophisticated options,
     # like dubious removal and sources agreement checking
 
-    # Apply each individual label, merge
+    # Apply each individual labeller, merge
     df = pd.concat([labeller(df) for _, labeller in labellers.items()])
 
     # Compute the percentage of measurements assays each compound is active
@@ -183,7 +183,7 @@ def _activities2classes(df, labellers, pct_active=1, pct_inactive=0):
     ).copy()
 
     # Active -> bool
-    unambiguous['active'] = unambiguous['active'].apply(lambda x: True if x >= pct_active else False)
+    unambiguous['active'] = unambiguous['active'] >= pct_active
 
     return unambiguous
 
