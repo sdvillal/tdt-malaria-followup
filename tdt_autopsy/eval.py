@@ -48,7 +48,8 @@ def _read_ccl_scores(path):
     return scores.sort_values('id').set_index('id', drop=False)
 
 
-def read_ccl_final_scores(screening=False,
+def read_ccl_final_scores(fusion201712=False,
+                          screening=False,
                           calibrated=False,
                           average_folds=True,
                           linr_stacker=True):
@@ -58,7 +59,10 @@ def read_ccl_final_scores(screening=False,
         result_stacker='avg' if not linr_stacker else 'stacker=linr',
         dset='scr' if screening else 'unl'
     )
-    return _read_ccl_scores(op.join(CCL_EXPERIMENTS_DIR, fn))
+    experiments_dir = (op.join(CCL_EXPERIMENTS_DIR, 'fusion201712') if fusion201712 else
+                       op.join(CCL_EXPERIMENTS_DIR, 'original-submission'))
+    return _read_ccl_scores(op.join(experiments_dir, fn))
+
 
 CCL_FINAL_EXTERNAL_SCORES = {
     'ccl_final_avg_linr': partial(read_ccl_final_scores, average_folds=True, linr_stacker=True),
@@ -111,6 +115,7 @@ def read_sg_scores(screening=False, modern=True):
                    fn)
     df = pd.read_csv(path, sep='\t', index_col=False)
     df = df.rename(columns={'#SAMPLE': 'id',
+                            '#Identifier': 'id',
                             'SMILES': 'smiles',
                             'Max_Probability': 'score',
                             'Max_Rank': 'max_rank'})
