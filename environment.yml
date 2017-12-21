@@ -15,6 +15,11 @@ dependencies:
   - cython
   - rdkit
   - argh
+  - python-marisa-trie
+  - tinyarray
+  - natsort
+  - feather-format
+  - tqdm
   # so we can run sereina notebook
   - jupyter
   - matplotlib
