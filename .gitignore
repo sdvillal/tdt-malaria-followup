@@ -33,3 +33,7 @@ nosetests.xml
 
 # Sphinx
 doc/_build
+
+# Others
+docs
+tdt-malaria-private
