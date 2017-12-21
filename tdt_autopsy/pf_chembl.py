@@ -1,10 +1,10 @@
 # coding=utf-8
 """Queries to chembl related to Plasmodium falciparum, activities munging."""
 from __future__ import print_function, division
+from future.utils import string_types
 
 import gzip
 
-from future.utils import string_types
 import os.path as op
 import pandas as pd
 from functools import partial
@@ -55,7 +55,7 @@ def _query_chembl_for_activities_against_plasmodium_falciparum(chembl_version='2
 def pf_activities(src_dir=CHEMBL_DEST_DIR, chembl_version='22_1', force=False):
     """
     Returns a pandas dataframe with all bioactivities for assays against plasmodium falciparum in chembl.
-    
+
     The dataframe has these columns (refer to the ChEMBL schema is something is not clear):
       'activity_id', 'assay_id', 'doc_id', 'record_id', 'molregno',
       'standard_relation', 'published_value', 'published_units',
@@ -213,6 +213,7 @@ def attribute_active(labellers='naive', pct_active=1, pct_inactive=0, force=Fals
             writer.write('ChEMBLs: %s' % ','.join(_CHEMBL_VERSIONS))
     return pd.read_csv(csv_file, index_col='standard_inchi', low_memory=False)
 
+
 naive_active = attribute_active
 stricter_active = partial(attribute_active, labellers='strict')
 relaxed_active = partial(attribute_active, labellers='relaxed')
@@ -260,6 +261,7 @@ def tidy_stjude_flo():
 
     stj_flo = pd.read_csv(STJUDE_FLO_GREG_ANNOTATED_CSV)
     stj_flo['in_chembl_21'] = stj_flo['Malaria (as of ChEMBL_21)'].apply()
+
 
 if __name__ == '__main__':
 
