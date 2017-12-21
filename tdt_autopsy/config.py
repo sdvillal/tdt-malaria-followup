@@ -24,7 +24,11 @@ CHEMBL_DEST_DIR = op.join(DATA_DIR, 'chembl-pf')
 STJUDE_CSV = op.join(DATA_DIR, 'StJudeResults2016.csv')
 STJUDE_FLO_GREG_ANNOTATED_CSV = op.join(CHEMBL_FIRST_ANALYSIS_DIR, 'hits_malaria_screen_flo.csv')
 
-# Ground truth for the competition benchmarl dataset
+# Tables as shown in the paper
+PAPER_NOT_INTRAIN_CSV = op.join(DATA_DIR, '--paper201712', 'paper-notintraining.csv')  # Table 5
+PAPER_INTRAIN_CSV = op.join(DATA_DIR, '--paper201712', 'paper-intraining.csv')         # Supplementary 1
+
+# Ground truth for the competition benchmark dataset
 COMPETITION_GT_CSV = op.join(DATA_DIR, 'TDT_Malaria_HTS_ranked.csv')
 COMPETITION_GT_TSV = op.join(DATA_DIR, 'tdt2014_challenge1_mar3d7_heldoutdataandresults.txt')
 
