@@ -1,45 +1,50 @@
 name: tdt
 channels:
-  - rdkit
-  - conda-forge
   - defaults
+  - rdkit  # cf rdkit seems buggy to me atm
+  - conda-forge
 dependencies:
-  - python=3
-  - future
-  - numpy
-  - scipy
-  - pandas
-  - h5py
-  - joblib
-  - scikit-learn
-  - cython
-  - rdkit
-  - argh
-  - python-marisa-trie
-  - tinyarray
-  - natsort
-  - feather-format
-  - tqdm
+  - defaults::python>=3.6
+  - defaults::future
+  - defaults::numpy
+  - defaults::scipy
+  - defaults::pandas
+  - defaults::h5py
+  - defaults::joblib
+  - defaults::scikit-learn
+  - defaults::cython
+  - conda-forge::rdkit
+  - conda-forge::argh
+  - conda-forge::python-marisa-trie
+  - conda-forge::tinyarray
+  - defaults::natsort
+  - conda-forge::feather-format
+  - defaults::tqdm
+  # some more linear model goodness
+  - sklearn-contrib-lightning
+  #  - vowpalwabbit  # Need to contribute to conda-forge, installed using pypi fails because of boost
   # so we can run sereina notebook
-  - jupyter
-  - matplotlib
-  - pillow
+  - defaults::jupyter
+  - defaults::matplotlib
+  - defaults::seaborn
+  - defaults::pillow
   # so some plots are not ugly
-  - cairo
-  - cairosvg
+  # - defaults::cairo
+  # - conda-forge::cairosvg  # At the moment needs old version of python, ask upstream
   # diffing notebooks
-  - nbdime
+  - conda-forge::nbdime
   # so we can run queries
   # - postgresql  # It should not be difficult to allow automated installation of Chembl xxxx.x
-  - sqlalchemy
-  - psycopg2
+  - defaults::sqlalchemy
+  - defaults::psycopg2
   # testing
-  - pytest
-  - pytest-cov
-  - pytest-pep8
+  - defaults::pytest
+  - defaults::pytest-cov
+  - defaults::pytest-pep8
+  # to ditch, probably
+  - defaults::numba
   - pip:
     - whatami
-    - argh
     - "--editable=./submissions/santi-modern/src"  # weird syntax until https://github.com/conda/conda/pull/3969 is merged
     - "--editable=./"
     # - submissions/sereina  # will need to add setup.py / make packages; it is mostly a notebook anyway
