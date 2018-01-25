@@ -262,11 +262,11 @@ class MultiFolder(object):
 class ZeroColumns(object):
 
     def __init__(self, columns, invert=False, origin='from_train', copy=True):
-        self.columns = np.unique(columns)
-        self.invert = invert
         # N.B. as usual, the numpy array hash will be valid for a couple of releases...
-        # So for the time being, I also add a origin attribute
+        # So for the time being, I also add a origin attribute and hide columns in the id
+        self._columns = np.unique(columns)
         self.origin = origin
+        self.invert = invert
         self._copy = copy
 
     # noinspection PyUnusedLocal
@@ -524,7 +524,7 @@ def compute_results(recompute=False, num_jobs=4, binarize=True, l1too=False, zer
         folder_as_binary = [True, False]  # True, True, True -> True or True, True, True -> 3
     else:
         folder_as_binary = [False]        # 3, 2, 5 -> 10
-    num_seeds = 4
+    num_seeds = 3
     hashes_per_cols = (2, 3)
     for seed, as_binary in product(range(num_seeds), folder_as_binary):
         folders += [
@@ -722,7 +722,6 @@ if __name__ == '__main__':
 
 #
 # Other things to try:
-
 #   - ... (see logreg_competition_benchmark_explorations.ipynb)
 # Other important things to report:
 #   - Check for actual collisions (better use the big SMARTS <-> rdkhash tables prepared)
