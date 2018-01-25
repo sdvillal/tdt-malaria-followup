@@ -474,7 +474,7 @@ def run_one_exp(Xlab, y_lab,
         return result
 
 
-def compute_results(recompute=False, num_jobs=4, binarize=True, l1too=False, zero_dupes=False):
+def compute_results(recompute=False, num_jobs=4, binarize=True, l1=False, zero_dupes=False):
     print('Loading data...')
     # The competition benchmark (N.B. also features not in train)
     i2m_unl, i2f_unl, Xunl, _ = rdkhash_feature_matrix(fpt='ecfp', dset='unl')
@@ -494,13 +494,14 @@ def compute_results(recompute=False, num_jobs=4, binarize=True, l1too=False, zer
 
     # Experimental variants...
 
-    models = [
-        ('tdtl2', LOGREG_MODELS.tdt_l2, logreg_stats),
-    ]
-    if l1too:
-        models += [
+    if l1:
+        models = [
             # Slow and not so competitive
             ('tdtl1', LOGREG_MODELS.tdt_l1, logreg_stats),
+        ]
+    else:
+        models = [
+            ('tdtl2', LOGREG_MODELS.tdt_l2, logreg_stats),
         ]
 
     if zero_dupes:
@@ -524,11 +525,11 @@ def compute_results(recompute=False, num_jobs=4, binarize=True, l1too=False, zer
         folder_as_binary = [True, False]  # True, True, True -> True or True, True, True -> 3
     else:
         folder_as_binary = [False]        # 3, 2, 5 -> 10
-    num_seeds = 3
+    num_seeds = 2
     hashes_per_cols = (2, 3)
     for seed, as_binary in product(range(num_seeds), folder_as_binary):
         folders += [
-            Folder(seed=seed, fold_size=511, as_binary=as_binary, save_map=False),
+            # Folder(seed=seed, fold_size=511, as_binary=as_binary, save_map=False),
             Folder(seed=seed, fold_size=1023, as_binary=as_binary, save_map=False),
             Folder(seed=seed, fold_size=2047, as_binary=as_binary, save_map=False),
             Folder(seed=seed, fold_size=4091, as_binary=as_binary, save_map=False),
@@ -540,8 +541,8 @@ def compute_results(recompute=False, num_jobs=4, binarize=True, l1too=False, zer
             seeds = tuple(range(hashes_per_col * seed, hashes_per_col * seed + hashes_per_col))
             # noinspection PyTypeChecker
             folders += [
-                MultiFolder(seeds=seeds, fold_size=511, as_binary=as_binary, save_map=False),
-                MultiFolder(seeds=seeds, fold_size=1023, as_binary=as_binary, save_map=False),
+                # MultiFolder(seeds=seeds, fold_size=511, as_binary=as_binary, save_map=False),
+                # MultiFolder(seeds=seeds, fold_size=1023, as_binary=as_binary, save_map=False),
                 MultiFolder(seeds=seeds, fold_size=2047, as_binary=as_binary, save_map=False),
                 MultiFolder(seeds=seeds, fold_size=4091, as_binary=as_binary, save_map=False),
                 MultiFolder(seeds=seeds, fold_size=8191, as_binary=as_binary, save_map=False),
@@ -553,7 +554,7 @@ def compute_results(recompute=False, num_jobs=4, binarize=True, l1too=False, zer
     else:
         unseen_in_foldings = True, False
 
-    row_normalizers = 'l1', 'l2', None
+    row_normalizers = None,  # 'l1', 'l2', None
 
     experiments = list(product(
         models,
@@ -603,10 +604,10 @@ def compute_at_home():
         num_jobs = 10
     else:
         raise Exception('unknown host %s' % host)
-    for l1too, zero_dupes, binarize in product(*order):
+    for l1, zero_dupes, binarize in product(*order):
         compute_results(recompute=False,
                         num_jobs=num_jobs,
-                        l1too=l1too, zero_dupes=zero_dupes, binarize=binarize)
+                        l1=l1, zero_dupes=zero_dupes, binarize=binarize)
 
 
 # --- Experiment analysis
