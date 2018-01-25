@@ -37,3 +37,5 @@ doc/_build
 # Others
 docs
 tdt-malaria-private
+--in-the-news
+.ipynb*
