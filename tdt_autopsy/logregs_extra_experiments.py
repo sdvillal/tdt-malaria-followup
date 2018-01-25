@@ -549,7 +549,7 @@ def compute_results(recompute=False, num_jobs=4, binarize=True, l1too=False, zer
                 MultiFolder(seeds=seeds, fold_size=32767, as_binary=as_binary, save_map=False),
             ]
     if zero_dupes:
-        unseen_in_foldings = False
+        unseen_in_foldings = False,
     else:
         unseen_in_foldings = True, False
 
