@@ -2,16 +2,18 @@ from __future__ import print_function, division
 
 import os
 import os.path as op
-from itertools import product
 import time
 import traceback as tb
+from itertools import product
 
-import numpy as np
-import pandas as pd
 import feather
 import joblib
-from scipy.sparse import isspmatrix_csr, isspmatrix_csc
-from whatami import call_dict, What, whatable
+import numpy as np
+import pandas as pd
+from scipy.sparse import issparse
+from toolz import isiterable
+
+from whatami import call_dict, What, whatable, what2id
 from whatami.wrappers.what_sklearn import whatamise_sklearn
 whatamise_sklearn()
 
@@ -168,14 +170,14 @@ class FastBinarizer(BaseEstimator, TransformerMixin):
 
     # noinspection PyUnusedLocal
     def fit(self, X, y=None):
-        if not isspmatrix_csc(X) and not isspmatrix_csr(X):
-            raise ValueError('X must be csc or csr')
+        if not issparse(X):
+            raise ValueError('X must be sparse (dense implementation coming soon, or not)')
         return self
 
     # noinspection PyUnusedLocal
     def transform(self, X, y='deprecated', copy=None):
-        if not isspmatrix_csc(X) and not isspmatrix_csr(X):
-            raise ValueError('X must be csc or csr')
+        if not issparse(X):
+            raise ValueError('X must be sparse (dense implementation coming soon, or not)')
         if copy is None:
             copy = self.copy
         if copy:
@@ -186,27 +188,119 @@ class FastBinarizer(BaseEstimator, TransformerMixin):
 
 @whatable
 class Folder(MurmurFolder):
+
     # noinspection PyUnusedLocal
     def fit(self, X, y=None):
-        if not isspmatrix_csc(X) and not isspmatrix_csr(X):
-            raise ValueError('X must be csc or csr')
+        if not issparse(X):
+            raise ValueError('X must be sparse (dense implementation coming soon, or not)')
         return self
 
     # noinspection PyUnusedLocal
     def transform(self, X, y='deprecated', copy=None):
-        if not isspmatrix_csc(X) and not isspmatrix_csr(X):
-            raise ValueError('X must be csc or csr')
+        if not issparse(X):
+            raise ValueError('X must be sparse (dense implementation coming soon, or not)')
         return self.fold(X)
+
+    def fold(self, X):
+        return self.transform(X)
+
+    #
+    # TODO: do not save the map, but still recompute the collision rate
+    # (find collumns that collide and their distribution in the matris, i.e.
+    # sum of values of each cell they collide, how many molecules they are in...)
+    #
+
+
+@whatable
+class MultiFolder(object):
+
+    def __init__(self, fold_size=1023, seeds=2, force_num_hashes=False, target_density=None,
+                 safe=True, as_binary=True, save_map=False):
+
+        # At some point we should implement these
+        if target_density is not None:
+            raise NotImplementedError('To implement: target_density')
+        if force_num_hashes:
+            raise NotImplementedError('To implement: force_num_hashes')
+        if save_map:
+            raise NotImplementedError('To implement: save_map')
+
+        if not isiterable(seeds):
+            seeds = tuple(range(seeds))
+        self.seeds = seeds
+
+        self.fold_size = fold_size
+        self.safe = safe
+        self.as_binary = as_binary
+        self._save_map = save_map
+
+    # noinspection PyUnusedLocal
+    def fit(self, X, y=None):
+        if not issparse(X):
+            raise ValueError('X must be sparse (dense implementation coming soon, or not)')
+        return self
+
+    # noinspection PyUnusedLocal
+    def transform(self, X, y='deprecated', copy=None):
+        if not issparse(X):
+            raise ValueError('X must be sparse (dense implementation coming soon, or not)')
+        Xfolded = None
+        for seed in self.seeds:
+            # TODO: it is easy to make a meta-folder that will keep track of key -> fold assignments
+            # (just merge the dictionaries of these MurmurFolders.save_map into dicts key -> [folds])
+            folder = MurmurFolder(fold_size=self.fold_size, seed=seed,
+                                  positive=True, safe=self.safe,
+                                  as_binary=self.as_binary, save_map=False)
+            if Xfolded is None:
+                Xfolded = folder.fold(X)
+            else:
+                Xfolded = Xfolded + folder.fold(X)
+        return Xfolded
+
+    def fold(self, X):
+        return self.transform(X)
+
+
+@whatable
+class ZeroColumns(object):
+
+    def __init__(self, columns, invert=False, origin='from_train', copy=True):
+        self.columns = np.unique(columns)
+        self.invert = invert
+        # N.B. as usual, the numpy array hash will be valid for a couple of releases...
+        # So for the time being, I also add a origin attribute
+        self.origin = origin
+        self._copy = copy
+
+    # noinspection PyUnusedLocal
+    def fit(self, X, y=None):
+        if not issparse(X):
+            raise ValueError('X must be sparse (dense implementation coming soon, or not)')
+        return self
+
+    # noinspection PyUnusedLocal
+    def transform(self, X, y='deprecated', copy=False):
+        if not issparse(X):
+            raise ValueError('X must be sparse (dense implementation coming soon, or not)')
+        if copy is None:
+            copy = self._copy
+        if copy:
+            X = X.copy()
+        return zero_columns(X, self.columns, zero_other=self.invert)
 
 
 def pre_model(model,
               copy=True,
+              zero_columns=None,
               binarize_threshold=None,
               binarize_fast=True,
               folder=None,
               scale=False,
               normalize=None):
     steps = []
+    # Get rid of some columns by making them constant zero?
+    if zero_columns is not None:
+        steps.append(('zero_columns', zero_columns))
     # Make fingerprint binary?
     if binarize_threshold is not None:
         if binarize_fast and binarize_threshold == 0:
@@ -224,6 +318,7 @@ def pre_model(model,
         steps.append(('normalize', Normalizer(norm=normalize, copy=copy)))
     # The model
     steps.append(('model', model))
+    # All together
     return Pipeline(steps)
 
 
@@ -261,6 +356,7 @@ def run_one_exp(Xlab, y_lab,
                 model_stats=None,
                 save_model=True,
                 save_predictions=False,
+                zero_columns=None,
                 min_radius=None, max_radius=None,
                 binarize_threshold=0,
                 folder=None, allow_unseen_in_folding=False,
@@ -274,6 +370,7 @@ def run_one_exp(Xlab, y_lab,
     # Model configuration
     model = model(Xlab, y_lab, train=False)
     model = pre_model(model=model,
+                      zero_columns=zero_columns,
                       binarize_threshold=binarize_threshold,
                       folder=folder,
                       scale=scale,
@@ -283,8 +380,11 @@ def run_one_exp(Xlab, y_lab,
                                 'hdf',
                                 'recompute', 'cache_dir',
                                 'model_stats', 'save_model', 'save_predictions'))
-    what = What(name='logreg_result', conf=result)
-    # FIXME: establish what are real keys...
+    # whatamise
+    # FIXME: narrow down to proper key (recursively)
+    for column in ('model', 'folder'):
+        result[column] = what2id(result[column])
+    what = What(name='result', conf=result)
     result['id'] = what.id(maxlength=1)
 
     cache_path = op.join(ensure_dir(cache_dir, result['id'][:2], result['id']), 'result.pkl')
@@ -335,7 +435,8 @@ def run_one_exp(Xlab, y_lab,
             model = clone(model)
         model = model.fit(Xlab, y_lab)
         if save_model:
-            result['model'] = model
+            # Of course, this should actually be model independent, only fallback to pickle
+            pd.to_pickle(model, op.join(cache_dir, 'model.pkl'))
         if model_stats is not None:
             result.update(model_stats(model.named_steps.model))
         result['fit_s'] = time.time() - start_fit
@@ -376,7 +477,7 @@ def run_one_exp(Xlab, y_lab,
         return result
 
 
-def compute_results(recompute=False, num_jobs=4, fold=False, l1too=False):
+def compute_results(recompute=False, num_jobs=4, binarize=True, l1too=False, zero_dupes=False):
     print('Loading data...')
     # The competition benchmark (N.B. also features not in train)
     i2m_unl, i2f_unl, Xunl, _ = rdkhash_feature_matrix(fpt='ecfp', dset='unl')
@@ -385,7 +486,9 @@ def compute_results(recompute=False, num_jobs=4, fold=False, l1too=False):
     i2m_lab, i2f_lab, f2i_lab, Xlab, y_lab = X_train_feats(fpt='ecfp', dsets='lab',
                                                            use_representatives=False, transductive=False)
     # Information about the features
-    hdf = munge_rdk_hashes_df(fpt='ecfp', nthreads=4, recompute=False, columns=['column', 'radius'])
+    hdf = munge_rdk_hashes_df(fpt='ecfp', nthreads=4, recompute=False, columns=['column', 'radius',
+                                                                                'representative_train',
+                                                                                'representative_transductive'])
     hdf = hdf.query('column < %d' % max(Xunl.shape[1], Xlab.shape[1]))
 
     # Show some info about our datasets
@@ -403,45 +506,61 @@ def compute_results(recompute=False, num_jobs=4, fold=False, l1too=False):
             ('tdtl1', LOGREG_MODELS.tdt_l1, logreg_stats),
         ]
 
+    if zero_dupes:
+        zerofiers = [
+            ZeroColumns(columns=hdf['representative_train'].values, invert=True, origin='from_train'),
+            ZeroColumns(columns=hdf['representative_transductive'].values, invert=True, origin='transductive')
+        ]
+    else:
+        zerofiers = [None]
+
     max_radii = [None, 2, 3, 4]  # 6, 8, 10
     min_radii = [None]  # But this could also be of interest
 
-    # None => use counts.
-    # TODO: we need to implement folding for counts (anyway most counts are == 1)
-    # If curious in a hurry, we could just compute everythonn that uses counts and no folding
-    binarizers = [0, None] if not fold else [0]
-
-    #
-    # TODO: implement folding for counts
-    # TODO: implement multiple foldings to create a mask
-    #   - Several seeds, let collisions happen freely
-    #   - Fix number of bits set, try to hash until bit pattern has a desired cardinality
-    #   - Or for colliding if binary, sum if counts
-    # TODO: do not save the map, but still recompute the collision rate
-    # (find collumns that collide and their distribution in the matris, i.e.
-    # sum of values of each cell they collide, how many molecules they are in...)
-    #
-    if fold:
-        folders = []
-        for seed in range(4):
-            folders += [
-                Folder(seed=seed, fold_size=511, save_map=False),
-                Folder(seed=seed, fold_size=1023, save_map=False),
-                Folder(seed=seed, fold_size=2047, save_map=False),
-                Folder(seed=seed, fold_size=4091, save_map=False),
-                Folder(seed=seed, fold_size=8191, save_map=False),
-                Folder(seed=seed, fold_size=16383, save_map=False),
-                Folder(seed=seed, fold_size=32767, save_map=False),
-            ]
-        unseen_in_foldings = True, False
+    if binarize:
+        binarizers = [0]
     else:
-        folders = [None]
-        unseen_in_foldings = [None]
+        binarizers = [None]
+
+    folders = [None]
+    if binarize:
+        folder_as_binary = [True, False]  # True, True, True -> True or True, True, True -> 3
+    else:
+        folder_as_binary = [False]        # 3, 2, 5 -> 10
+    num_seeds = 4
+    hashes_per_cols = (2, 3)
+    for seed, as_binary in product(range(num_seeds), folder_as_binary):
+        folders += [
+            Folder(seed=seed, fold_size=511, as_binary=as_binary, save_map=False),
+            Folder(seed=seed, fold_size=1023, as_binary=as_binary, save_map=False),
+            Folder(seed=seed, fold_size=2047, as_binary=as_binary, save_map=False),
+            Folder(seed=seed, fold_size=4091, as_binary=as_binary, save_map=False),
+            Folder(seed=seed, fold_size=8191, as_binary=as_binary, save_map=False),
+            Folder(seed=seed, fold_size=16383, as_binary=as_binary, save_map=False),
+            Folder(seed=seed, fold_size=32767, as_binary=as_binary, save_map=False),
+        ]
+        for hashes_per_col in hashes_per_cols:
+            seeds = tuple(range(hashes_per_col * seed, hashes_per_col * seed + hashes_per_col))
+            # noinspection PyTypeChecker
+            folders += [
+                MultiFolder(seeds=seeds, fold_size=511, as_binary=as_binary, save_map=False),
+                MultiFolder(seeds=seeds, fold_size=1023, as_binary=as_binary, save_map=False),
+                MultiFolder(seeds=seeds, fold_size=2047, as_binary=as_binary, save_map=False),
+                MultiFolder(seeds=seeds, fold_size=4091, as_binary=as_binary, save_map=False),
+                MultiFolder(seeds=seeds, fold_size=8191, as_binary=as_binary, save_map=False),
+                MultiFolder(seeds=seeds, fold_size=16383, as_binary=as_binary, save_map=False),
+                MultiFolder(seeds=seeds, fold_size=32767, as_binary=as_binary, save_map=False),
+            ]
+    if zero_dupes:
+        unseen_in_foldings = False
+    else:
+        unseen_in_foldings = True, False
 
     row_normalizers = 'l1', 'l2', None
 
     experiments = list(product(
         models,
+        zerofiers,
         min_radii,
         max_radii,
         binarizers,
@@ -459,6 +578,7 @@ def compute_results(recompute=False, num_jobs=4, fold=False, l1too=False):
             model_stats=model_stats,
             save_model=False, save_predictions=False,
             data_name='competition-external',
+            zero_columns=zerofier,
             min_radius=min_radius, max_radius=max_radius,
             binarize_threshold=binarizer,
             folder=folder, allow_unseen_in_folding=unseen_in_folding,
@@ -467,6 +587,7 @@ def compute_results(recompute=False, num_jobs=4, fold=False, l1too=False):
             recompute=recompute,
         )
         for ((model_name, model, model_stats),
+             zerofier,
              min_radius, max_radius,
              binarizer,
              folder, unseen_in_folding,
@@ -478,13 +599,13 @@ def compute_at_home():
     import socket
     host = socket.gethostname()
     if host == 'snowy':
-        compute_results(recompute=False, num_jobs=4, fold=False, l1too=False)
-        compute_results(recompute=False, num_jobs=4, fold=True, l1too=False)
+        num_jobs = 4
     elif host == 'mumbler':
-        compute_results(recompute=False, num_jobs=8, fold=True, l1too=False)
-        compute_results(recompute=False, num_jobs=8, fold=False, l1too=False)
-        compute_results(recompute=False, num_jobs=8, fold=True, l1too=True)
-        compute_results(recompute=False, num_jobs=8, fold=False, l1too=True)
+        num_jobs = 8
+    else:
+        num_jobs = 1
+    for l1too, zero_dupes, binarize in product((False, True), repeat=3):
+        compute_results(recompute=False, num_jobs=num_jobs, l1too=l1too, zero_dupes=zero_dupes, binarize=binarize)
 
 
 # --- Experiment analysis
