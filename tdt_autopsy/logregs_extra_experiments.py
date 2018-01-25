@@ -201,9 +201,6 @@ class Folder(MurmurFolder):
             raise ValueError('X must be sparse (dense implementation coming soon, or not)')
         return self.fold(X)
 
-    def fold(self, X):
-        return self.transform(X)
-
     #
     # TODO: do not save the map, but still recompute the collision rate
     # (find collumns that collide and their distribution in the matris, i.e.
