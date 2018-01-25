@@ -20,9 +20,10 @@ from tdt_autopsy.eval import read_ccl_final_scores, read_sg_scores
 # --- Canonical smiles used
 # Note that there might be divergences as we are using later versions of rdkit than these originally used
 
-def cansmi(smi):
-    mol = to_rdkit_mol(smi, molid=None, sanitize=True, toPropertyMol=False, to2D=False, to3D=False)
-    return MolToSmiles(mol,
+def cansmi(mol_or_smi):
+    if isinstance(mol_or_smi, string_types):
+        mol_or_smi = to_rdkit_mol(mol_or_smi, molid=None, toPropertyMol=False, to2D=False, to3D=False)
+    return MolToSmiles(mol_or_smi,
                        isomericSmiles=True,
                        kekuleSmiles=False,
                        canonical=True,
