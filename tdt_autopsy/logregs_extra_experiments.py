@@ -718,11 +718,10 @@ if __name__ == '__main__':
 
 #
 # Other things to try:
-#   - Folding counts
-#   - Removal of duplicates by selecting representative (it should just be a couple of lines)
-#   - Differences of weights and performance with representatives on/off
-#   - ... (sdd logreg_competition_benchmark_explorations.ipynb)
+
+#   - ... (see logreg_competition_benchmark_explorations.ipynb)
 # Other important things to report:
 #   - Check for actual collisions (better use the big SMARTS <-> rdkhash tables prepared)
+#     Can be done efficiently by keeping stats with murmur hasher.
 #   - A proper dataset (My malaria export from chembl is already prepared)
 #
