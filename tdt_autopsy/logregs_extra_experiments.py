@@ -26,7 +26,7 @@ from lightning.classification import CDClassifier
 import tqdm
 tqdm.tqdm.monitor_interval = 0
 
-from ccl_malaria.features import MurmurFolder, zero_columns
+from ccl_malaria.features import MurmurFolder, zero_columns as make_columns_zero
 from tdt_autopsy.eval import score_result, read_benchmark_labels
 from tdt_autopsy.substructure_collision_analysis import X_train_feats, munge_rdk_hashes_df, rdkhash_feature_matrix
 
@@ -283,7 +283,7 @@ class ZeroColumns(object):
             copy = self._copy
         if copy:
             X = X.copy()
-        return zero_columns(X, self._columns, zero_other=self.invert)
+        return make_columns_zero(X, self._columns, zero_other=self.invert)
 
 
 def pre_model(model,
@@ -379,7 +379,7 @@ def run_one_exp(Xlab, y_lab,
                                 'model_stats', 'save_model', 'save_predictions'))
     # whatamise
     # FIXME: narrow down to proper key (recursively)
-    for column in ('model', 'folder'):
+    for column in ('model', 'folder', 'zero_columns'):
         result[column] = what2id(result[column])
     what = What(name='result', conf=result)
     result['id'] = what.id(maxlength=1)
@@ -411,12 +411,12 @@ def run_one_exp(Xlab, y_lab,
         # Apply radius constraints (as usual, just make columns constant 0)
         if max_radius is not None:
             columns_out = hdf.query('radius > %d' % max_radius).column.values
-            Xlab = zero_columns(Xlab, columns_out)
-            Xunl = zero_columns(Xunl, columns_out)
+            Xlab = make_columns_zero(Xlab, columns_out)
+            Xunl = make_columns_zero(Xunl, columns_out)
         if min_radius is not None:
             columns_out = hdf.query('radius < %d' % min_radius).column.values
-            Xlab = zero_columns(Xlab, columns_out)
-            Xunl = zero_columns(Xunl, columns_out)
+            Xlab = make_columns_zero(Xlab, columns_out)
+            Xunl = make_columns_zero(Xunl, columns_out)
 
         # Remove unseen features from unl if we are not gonna use them
         if not allow_unseen_in_folding or folder is None:
