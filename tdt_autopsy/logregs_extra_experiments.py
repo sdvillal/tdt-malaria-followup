@@ -603,7 +603,7 @@ def compute_at_home():
         num_jobs = 10
     else:
         raise Exception('unknown host %s' % host)
-    for l1too, zero_dupes, binarize in product(order):
+    for l1too, zero_dupes, binarize in product(*order):
         compute_results(recompute=False,
                         num_jobs=num_jobs,
                         l1too=l1too, zero_dupes=zero_dupes, binarize=binarize)
