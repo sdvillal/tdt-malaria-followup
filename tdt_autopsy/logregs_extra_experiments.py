@@ -596,13 +596,17 @@ def compute_at_home():
     import socket
     host = socket.gethostname()
     if host == 'snowy':
+        order = [(False, True), (False, True), (False, True)]
         num_jobs = 4
     elif host == 'mumbler':
-        num_jobs = 8
+        order = [(False, True), (True, False), (True, False)]
+        num_jobs = 10
     else:
-        num_jobs = 1
-    for l1too, zero_dupes, binarize in product((False, True), repeat=3):
-        compute_results(recompute=False, num_jobs=num_jobs, l1too=l1too, zero_dupes=zero_dupes, binarize=binarize)
+        raise Exception('unknown host %s' % host)
+    for l1too, zero_dupes, binarize in order:
+        compute_results(recompute=False,
+                        num_jobs=num_jobs,
+                        l1too=l1too, zero_dupes=zero_dupes, binarize=binarize)
 
 
 # --- Experiment analysis
