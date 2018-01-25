@@ -489,37 +489,24 @@ def compute_at_home():
 
 # --- Experiment analysis
 
-def load_all_results(path=RESULTS_CACHE_DIR, remove_objects=False):
-    # Load all these nasty quick and dirty pickles
-    results = []
-    for dirpath, dirnames, filenames in os.walk(path):
-        if 'result.pkl' in filenames:
-            results.append(pd.read_pickle(op.join(dirpath, 'result.pkl')))
+def human_sort_columns(df):
 
-    # Dataframeit!
-    df = pd.DataFrame(results)
-
-    # Extract parameters from nested descriptions (folder, pipeline)
-    # TODO: whatid2columns needs some love @ whatami
-    # df = whatid2columns(df, 'folder', columns=['fold_size'], prefix='folder_')
-    df['fold_size'] = df['folder'].apply(lambda x: None if x is None else x.fold_size)
-    df['fold_seed'] = df['folder'].apply(lambda x: None if x is None else x.seed)
-
-    # Reorganize to have tidy columns
-    column_order = [
+    _TIDY_COLUMN_ORDER = [
         # Experimental variables
         'data_name',
         'model_name',
         'binarize_threshold',
+        'is_counts',
         'folder',
-        'fold_size',
         'allow_unseen_in_folding',
-        'max_radius',
+        'fold_size',
+        'fold_seed',
         'min_radius',
+        'max_radius',
         'row_normalizer',
         'scale',
         # Model stats
-        'sparsity',
+        'model_sparsity',
         # Performance in the competition challenge dataset
         'auc',
         'enrichment_1',
@@ -541,9 +528,29 @@ def load_all_results(path=RESULTS_CACHE_DIR, remove_objects=False):
         # Failures
         'fail',
     ]
-    columns = [column for column in column_order if column in df.columns]
+    columns = [column for column in _TIDY_COLUMN_ORDER if column in df.columns]
     columns += [column for column in df.columns if column not in columns]
-    df = df[columns]
+    return df[columns]
+
+
+def load_all_results(path=RESULTS_CACHE_DIR, remove_objects=False):
+    # Load all these nasty quick and dirty pickles
+    results = []
+    for dirpath, dirnames, filenames in os.walk(path):
+        if 'result.pkl' in filenames:
+            results.append(pd.read_pickle(op.join(dirpath, 'result.pkl')))
+
+    # Dataframeit!
+    df = pd.DataFrame(results)
+
+    # Extract parameters from nested descriptions (folder, pipeline)
+    # TODO: whatid2columns needs some love @ whatami
+    # df = whatid2columns(df, 'folder', columns=['fold_size'], prefix='folder_')
+    df['fold_size'] = df['folder'].apply(lambda x: None if x is None else x.fold_size)
+    df['fold_seed'] = df['folder'].apply(lambda x: None if x is None else x.seed)
+
+    # Reorganize to have tidy columns
+    df = human_sort_columns(df)
 
     # Do not keep objects
     if remove_objects:
@@ -574,14 +581,16 @@ def tidy_results(recompute=False):
 
     fillna(df, 'row_normalizer', 'none')
     fillna(df, 'fold_size', np.inf)
+    fillna(df, 'fold_seed', -1)
     fillna(df, 'allow_unseen_in_folding', False)
     fillna(df, 'binarize_threshold', np.inf)
     fillna(df, 'max_radius', np.inf)
     fillna(df, 'min_radius', -np.inf)
+    df['fold_seed'] = df['fold_seed'].astype(np.int)
     df['fold_size'] = df['fold_size'].apply(lambda x: int(x) if np.isfinite(x) else 2**32-1)
     df['is_counts'] = df['binarize_threshold'].apply(lambda x: x != 0)
 
-    return df
+    return human_sort_columns(df)
 
 
 if __name__ == '__main__':
