@@ -715,6 +715,32 @@ def tidy_results(recompute=False):
     return human_sort_columns(df)
 
 
+# --- Legacy results readers
+
+def tidy_results_01(cache_path=op.join(RESULTS_DIR, '01results', 'results.tidy.feather')):
+    """These are old results, we can still read the dataframe."""
+
+    df = feather.read_dataframe(cache_path)
+
+    # Make missings sendible for grouping
+
+    def fillna(df, column, value):
+        df[column] = df[column].fillna(value=value)
+
+    fillna(df, 'row_normalizer', 'none')
+    fillna(df, 'fold_size', np.inf)
+    fillna(df, 'fold_seed', -1)
+    fillna(df, 'allow_unseen_in_folding', False)
+    fillna(df, 'binarize_threshold', np.inf)
+    fillna(df, 'max_radius', np.inf)
+    fillna(df, 'min_radius', -np.inf)
+    df['fold_seed'] = df['fold_seed'].astype(np.int)
+    df['fold_size'] = df['fold_size'].apply(lambda x: int(x) if np.isfinite(x) else 2**32-1)
+    df['is_counts'] = df['binarize_threshold'].apply(lambda x: x != 0)
+
+    return human_sort_columns(df)
+
+
 if __name__ == '__main__':
     compute_at_home()
     tidy_results(recompute=True).info()
