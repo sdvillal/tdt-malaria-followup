@@ -283,7 +283,7 @@ class ZeroColumns(object):
             copy = self._copy
         if copy:
             X = X.copy()
-        return zero_columns(X, self.columns, zero_other=self.invert)
+        return zero_columns(X, self._columns, zero_other=self.invert)
 
 
 def pre_model(model,
