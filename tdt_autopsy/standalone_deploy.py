@@ -1,9 +1,15 @@
 from __future__ import print_function
 
+import h5py
 from sklearn.linear_model import LogisticRegression
 
 from ccl_malaria.logregs_analysis import logreg_experiments_to_deploy, deployment_models
+from ccl_malaria.molscatalog import MalariaCatalog
 from ccl_malaria.trees_analysis import trees_results_to_pandas
+from minioscail.common.misc import ensure_dir
+from tdt_autopsy.config import DATA_DIR
+from tdt_autopsy.logregs_extra_experiments import LOGREG_MODELS
+from tdt_autopsy.substructure_collision_analysis import X_train_feats
 
 smiles = 'CC1CCC/C(C)=C1/C=C/C(C)=C/C=C/C(C)=C/C=C/C=C(C)/C=C/C=C(C)/C=C/C2=C(C)/CCCC2(C)C'
 
@@ -182,13 +188,118 @@ def logreg_deployers():
         print(model)
 
 
-logreg_deployers()
+import os.path as op
+DEPLOY_PATH = op.join(DATA_DIR, '--unfolded-explorations', 'deploy-models')
 
 
-class Featurizer(object):
-    def __init__(self, path):
-        self.path = path
+def simplemost_deploy(path=DEPLOY_PATH):
 
+    # Load the train data
+    _, i2f_lab, _, Xlab, y_lab = X_train_feats(fpt='ecfp', dsets='lab')
+
+    # Train
+    model = LOGREG_MODELS.tdt_l2(Xlab, y_lab, train=True)
+
+    # Save
+
+    path = op.join(ensure_dir(path), 'model.hdf5')
+
+    model_description = {
+        'train_data': 'full-TDT2014-unambiguous',
+        'featurizer': 'type=ecfc,id=rdkithash,radius=all,folder=unfolded,zero_dupes=False',
+        'preprocessor': 'none',
+        'model_setup': str(model),
+    }
+
+    with h5py.File(path, 'w') as h5:
+        model_g = h5.create_group('model')
+        model_g['coef'] = model.coef_
+        model_g['intercept'] = model.intercept_
+        model_g['col2hash'] = i2f_lab
+        for k, v in model_description.items():
+            model_g.attrs[k] = v
+
+
+import numpy as np
+from scipy.sparse import csr_matrix
+from rdkit.Chem import AllChem
+
+mols = [
+    'COc1ccc(NC(=O)CSc2nc(ns2)c3ccccc3Cl)c(OC)c1',
+    'COC(=O)c1ccc(\C=C(\C#N)/C(=O)Nc2cccc(c2)[N+](=O)[O-])cc1',
+]
+
+
+def smiles2fpt(smi):
+    if isinstance(smi, str):
+        mol = AllChem.MolFromSmiles(smi)
+    else:
+        mol = smi
+    fpt = AllChem.GetMorganFingerprint(mol,
+                                       200,
+                                       bitInfo=None,
+                                       useFeatures=False,
+                                       useChirality=False,
+                                       useBondTypes=False)
+    return fpt.GetNonzeroElements()
+
+
+class Predictor(object):
+
+    def __init__(self, path=DEPLOY_PATH):
+        # Load the model into memory
+        with h5py.File(op.join(path, 'model.hdf5')) as h5:
+            self._logreg = LogisticRegression()
+            self._logreg.coef_ = h5['model']['coef'][()]
+            self._logreg.intercept_ = h5['model']['intercept'][()]
+            self._hash2col = {h: c for c, h in enumerate(h5['model']['col2hash'][()])}
+            self.meta = dict(h5['model'].attrs)
+
+    def __call__(self, fpt):
+        # batch_size
+        # an optimization would be to store the max radius of any seen feature
+        cols = np.zeros(len(fpt), dtype=np.int)
+        data = np.zeros(len(fpt), dtype=np.float)
+        num_set_vals = 0
+        for rdkhash, count in fpt.items():
+            col = self._hash2col.get(rdkhash)
+            if col is not None:
+                cols[num_set_vals] = col
+                data[num_set_vals] = count
+                num_set_vals += 1
+        cols = cols[:num_set_vals]
+        data = data[:num_set_vals]
+        # FIXME: check when hash2col does not return properly sorted stuff
+        X = csr_matrix((data, cols, [0, num_set_vals]),
+                       shape=(1, len(self._hash2col)),
+                       dtype=data.dtype)
+        return self._logreg.predict_proba(X)[0]
+
+
+if __name__ == '__main__':
+    # simplemost_deploy()
+    predictor = Predictor()
+
+    mc = MalariaCatalog()
+
+    import sys
+    import tqdm
+    from sklearn.metrics import roc_auc_score
+
+    # for smi in mols:
+    scores = []
+    gt = []
+    for molid in tqdm.tqdm(mc.lab(), unit='mol', file=sys.stdout):
+        # smi = mc.molid2smiles(molid)
+        smi = mc.molid2mol(molid)
+        y = mc.molid2label(molid, as01=True)
+        if smi is not None and y == y:
+            scores.append(predictor(smiles2fpt(smi))[1])
+            gt.append(y)
+        if len(gt) > 0 and len(gt) % 10000 == 0 and np.sum(gt) > 0:
+            print('\n %.2f' % roc_auc_score(gt, scores))
+
+    print('\n %.2f' % roc_auc_score(gt, scores))
 
 
 #
