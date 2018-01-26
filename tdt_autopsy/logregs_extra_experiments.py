@@ -618,9 +618,12 @@ def human_sort_columns(df):
         # Experimental variables
         'data_name',
         'model_name',
-        'binarize_threshold',
         'zero_columns',
-        'is_counts',
+        'binarize_threshold',
+        'input_is_binary',
+        'is_binary',
+        'is_binary_counts',
+        'is_regular_counts',
         'allow_unseen_in_folding',
         'fold_size',
         'fold_seed',
@@ -682,7 +685,6 @@ def tidy_results(recompute=False):
         df = load_all_results()
         feather.write_dataframe(df, cache_path)
 
-    # Extract parameters from nested descriptions (folder, pipeline)
     df['fold_size'] = df['folder'].apply(lambda x: None if x is None else id2what(x)['fold_size'])
 
     def fold_seed(x):
@@ -701,9 +703,14 @@ def tidy_results(recompute=False):
         return 1 if not isinstance(seed, tuple) else len(seed)
     df['num_fold_seeds'] = df['folder'].apply(num_fold_seeds)
 
-    df['zero_columns'] = df['zero_columns'].apply(lambda x: 'none' if x is None else id2what(x)['origin'])
+    def folder_forces_binary(x):
+        if x is None:
+            return False
+        what = id2what(x)
+        return what['as_binary']
+    df['fold_as_binary'] = df['folder'].apply(folder_forces_binary)
 
-    # Make missings sensible for grouping
+    df['zero_columns'] = df['zero_columns'].apply(lambda x: 'none' if x is None else id2what(x)['origin'])
 
     def fillna(df, column, value):
         df[column] = df[column].fillna(value=value)
@@ -714,11 +721,28 @@ def tidy_results(recompute=False):
     df['fold_size'] = df['fold_size'].apply(lambda x: int(x) if np.isfinite(x) else 2**32-1)
 
     fillna(df, 'folder', 'none')
+    df['unfolded'] = df['folder'].apply(lambda x: x == 'none')
 
     fillna(df, 'allow_unseen_in_folding', False)
     fillna(df, 'binarize_threshold', np.inf)
 
-    df['is_counts'] = df['binarize_threshold'].apply(lambda x: x != 0)
+    #
+    # Two types of count fingerprints arise when folding:
+    #
+    #   - Normal counts: sums the total count each colliding structures appear in the molecule
+    #    (e.g. if the two structures 2: 3 and 4: 5 collide to bucket 1) => 1: 8
+    #     This happens if the original matrices are counts and fold_as_binary is False
+    #
+    #   - Binary counts: sums how many different colliding structures appear in the molecule
+    #    (e.g. if the two structures 2: 1 and 4: 1 collide to bucket 1) => 1: 2
+    #     This happens if the original matrices are binary and fold_as_binary is False
+    #
+    # Let's make the distinction apparent.
+    #
+    df['input_is_binary'] = df['binarize_threshold'].apply(lambda x: x == 0)
+    df['is_binary'] = df['input_is_binary'] & (df['fold_as_binary'] | df['unfolded'])
+    df['is_binary_counts'] = df['input_is_binary'] & ~df['fold_as_binary']
+    df['is_regular_counts'] = ~df['input_is_binary'] & ~df['is_binary_counts']
 
     fillna(df, 'max_radius', np.inf)
     fillna(df, 'min_radius', -np.inf)
