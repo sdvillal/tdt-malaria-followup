@@ -570,7 +570,7 @@ def compute_results(ignore_existing=False, recompute=False, num_jobs=4, binarize
         row_normalizers
     ))
 
-    joblib.Parallel(n_jobs=num_jobs, batch_size=1, pre_dispatch=num_jobs)(
+    joblib.Parallel(n_jobs=num_jobs)(  # , batch_size=1, pre_dispatch=num_jobs
         joblib.delayed(run_one_exp)(
             Xlab, y_lab,
             Xunl, y_unl, i2m_unl,
