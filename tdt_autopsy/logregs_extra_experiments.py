@@ -349,7 +349,7 @@ def run_one_exp(Xlab, y_lab,
                 hdf,
                 model_name, model,
                 data_name='competition-external',
-                recompute=False, cache_dir=RESULTS_CACHE_DIR,
+                recompute=False, ignore_existing=False, cache_dir=RESULTS_CACHE_DIR,
                 model_stats=None,
                 save_model=True,
                 save_predictions=False,
@@ -387,6 +387,9 @@ def run_one_exp(Xlab, y_lab,
     cache_path = op.join(ensure_dir(cache_dir, result['id'][:2], result['id']), 'result.pkl')
     if not recompute:
         try:
+            if ignore_existing and op.isfile(cache_path):
+                print('Ignoring %s')
+                return None
             result = pd.read_pickle(cache_path)
             if 'fail' not in result:
                 print('Loaded result from %s' % cache_path)
@@ -474,7 +477,7 @@ def run_one_exp(Xlab, y_lab,
         return result
 
 
-def compute_results(recompute=False, num_jobs=4, binarize=True, l1=False, zero_dupes=False):
+def compute_results(ignore_existing=False, recompute=False, num_jobs=4, binarize=True, l1=False, zero_dupes=False):
     print('Loading data...')
     # The competition benchmark (N.B. also features not in train)
     i2m_unl, i2f_unl, Xunl, _ = rdkhash_feature_matrix(fpt='ecfp', dset='unl')
@@ -583,6 +586,7 @@ def compute_results(recompute=False, num_jobs=4, binarize=True, l1=False, zero_d
             scale=False,
             row_normalizer=row_normalizer,
             recompute=recompute,
+            ignore_existing=ignore_existing,
         )
         for ((model_name, model, model_stats),
              zerofier,
@@ -608,7 +612,8 @@ def compute_at_home():
         (True, False)
     ]
     for l1, zero_dupes, binarize in product(*order):
-        compute_results(recompute=False,
+        compute_results(ignore_existing=True,
+                        recompute=False,
                         num_jobs=num_jobs,
                         l1=l1, zero_dupes=zero_dupes, binarize=binarize)
 
