@@ -12,9 +12,9 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import issparse
 from toolz import isiterable
-
 from whatami import call_dict, What, whatable, what2id, id2what
 from whatami.wrappers.what_sklearn import whatamise_sklearn
+
 whatamise_sklearn()
 
 from sklearn.base import TransformerMixin, BaseEstimator, clone
@@ -525,11 +525,11 @@ def compute_results(recompute=False, num_jobs=4, binarize=True, l1=False, zero_d
         folder_as_binary = [True, False]  # True, True, True -> True or True, True, True -> 3
     else:
         folder_as_binary = [False]        # 3, 2, 5 -> 10
-    num_seeds = 2
+    num_seeds = 4
     hashes_per_cols = (2, 3)
     for seed, as_binary in product(range(num_seeds), folder_as_binary):
         folders += [
-            # Folder(seed=seed, fold_size=511, as_binary=as_binary, save_map=False),
+            Folder(seed=seed, fold_size=511, as_binary=as_binary, save_map=False),
             Folder(seed=seed, fold_size=1023, as_binary=as_binary, save_map=False),
             Folder(seed=seed, fold_size=2047, as_binary=as_binary, save_map=False),
             Folder(seed=seed, fold_size=4091, as_binary=as_binary, save_map=False),
@@ -541,8 +541,8 @@ def compute_results(recompute=False, num_jobs=4, binarize=True, l1=False, zero_d
             seeds = tuple(range(hashes_per_col * seed, hashes_per_col * seed + hashes_per_col))
             # noinspection PyTypeChecker
             folders += [
-                # MultiFolder(seeds=seeds, fold_size=511, as_binary=as_binary, save_map=False),
-                # MultiFolder(seeds=seeds, fold_size=1023, as_binary=as_binary, save_map=False),
+                MultiFolder(seeds=seeds, fold_size=511, as_binary=as_binary, save_map=False),
+                MultiFolder(seeds=seeds, fold_size=1023, as_binary=as_binary, save_map=False),
                 MultiFolder(seeds=seeds, fold_size=2047, as_binary=as_binary, save_map=False),
                 MultiFolder(seeds=seeds, fold_size=4091, as_binary=as_binary, save_map=False),
                 MultiFolder(seeds=seeds, fold_size=8191, as_binary=as_binary, save_map=False),
@@ -597,13 +597,16 @@ def compute_at_home():
     import socket
     host = socket.gethostname()
     if host == 'snowy':
-        order = [(False, True), (False, True), (False, True)]
         num_jobs = 4
     elif host == 'mumbler':
-        order = [(False, True), (True, False), (True, False)]
         num_jobs = 10
     else:
         raise Exception('unknown host %s' % host)
+    order = [
+        (False,),       # Maybe one day we care about L1 regularization => (False, True)
+        (True, False),
+        (True, False)
+    ]
     for l1, zero_dupes, binarize in product(*order):
         compute_results(recompute=False,
                         num_jobs=num_jobs,
