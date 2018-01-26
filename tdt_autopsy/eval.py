@@ -190,7 +190,7 @@ ALL_EXTERNAL_SCORES.update(SG_EXTERNAL_SCORES)
 ALL_EXTERNAL_SCORES['ccl_sg_blend'] = average_scores
 
 
-if __name__ == '__main__':
+def results_df():
     external_gt = read_benchmark_labels()
     results = [score_result(scores=scorer, actual=external_gt,
                             dataset='competition_benchmark',
@@ -200,10 +200,12 @@ if __name__ == '__main__':
     order = ['model', 'dataset', 'auc',
              'enrichment_1', 'enrichment_5', 'enrichment_10',
              'bedroc20', 'rie20']
-    results_df = results_df[order].sort_values(['dataset', 'model']).reset_index(drop=True)
+    return results_df[order].sort_values(['dataset', 'model']).reset_index(drop=True)
 
+
+if __name__ == '__main__':
     pd.set_option('precision', 2)
-    results_df.sort_values('auc', ascending=False).to_html('results-external.html', index=False)
+    results_df().sort_values('auc', ascending=False).to_html('results-external.html', index=False)
 
     # TODO: rebuild also CCL trees / logregs, put a moderner version there
     # TODO: do not fail if a result is missing (catch, continue)
