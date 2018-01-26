@@ -13,7 +13,7 @@ import pandas as pd
 from scipy.sparse import issparse
 from toolz import isiterable
 
-from whatami import call_dict, What, whatable, what2id
+from whatami import call_dict, What, whatable, what2id, id2what
 from whatami.wrappers.what_sklearn import whatamise_sklearn
 whatamise_sklearn()
 
@@ -619,17 +619,16 @@ def human_sort_columns(df):
         'data_name',
         'model_name',
         'binarize_threshold',
+        'zero_columns',
         'is_counts',
-        'folder',
         'allow_unseen_in_folding',
         'fold_size',
         'fold_seed',
+        'num_fold_seeds',
         'min_radius',
         'max_radius',
         'row_normalizer',
         'scale',
-        # Model stats
-        'model_sparsity',
         # Performance in the competition challenge dataset
         'auc',
         'enrichment_1',
@@ -643,11 +642,13 @@ def human_sort_columns(df):
         'predict_s',
         'eval_s',
         'total_s',
-        'folder',
         # Experiment ID
         'id',
-        # Model details
+        # Model stats
+        'model_sparsity',
+        # Object details
         'model',
+        'folder',
         # Failures
         'fail',
     ]
@@ -656,31 +657,15 @@ def human_sort_columns(df):
     return df[columns]
 
 
-def load_all_results(path=RESULTS_CACHE_DIR, remove_objects=False):
+def load_all_results(path=RESULTS_CACHE_DIR):
     # Load all these nasty quick and dirty pickles
     results = []
     for dirpath, dirnames, filenames in os.walk(path):
         if 'result.pkl' in filenames:
-            results.append(pd.read_pickle(op.join(dirpath, 'result.pkl')))
-
-    # Dataframeit!
-    df = pd.DataFrame(results)
-
-    # Extract parameters from nested descriptions (folder, pipeline)
-    # TODO: whatid2columns needs some love @ whatami
-    # df = whatid2columns(df, 'folder', columns=['fold_size'], prefix='folder_')
-    df['fold_size'] = df['folder'].apply(lambda x: None if x is None else x.fold_size)
-    df['fold_seed'] = df['folder'].apply(lambda x: None if x is None else x.seed)
-
-    # Reorganize to have tidy columns
-    df = human_sort_columns(df)
-
-    # Do not keep objects
-    if remove_objects:
-        del df['model']
-        del df['folder']
-
-    return df
+            result_dict = pd.read_pickle(op.join(dirpath, 'result.pkl'))
+            results.append(result_dict)
+    # Dataframeit
+    return pd.DataFrame(results)
 
 
 def tidy_results(recompute=False):
@@ -694,24 +679,49 @@ def tidy_results(recompute=False):
         except IOError:
             pass
     if df is None:
-        df = load_all_results(remove_objects=True)
+        df = load_all_results()
         feather.write_dataframe(df, cache_path)
 
-    # Make missings sendible for grouping
+    # Extract parameters from nested descriptions (folder, pipeline)
+    df['fold_size'] = df['folder'].apply(lambda x: None if x is None else id2what(x)['fold_size'])
+
+    def fold_seed(x):
+        if x is None:
+            return 'nofold'
+        what = id2what(x)
+        seed = what.get('seed', what.get('seeds'))
+        return str(seed)
+    df['fold_seed'] = df['folder'].apply(fold_seed)
+
+    def num_fold_seeds(x):
+        if x is None:
+            return 0
+        what = id2what(x)
+        seed = what.get('seed', what.get('seeds'))
+        return 1 if not isinstance(seed, tuple) else len(seed)
+    df['num_fold_seeds'] = df['folder'].apply(num_fold_seeds)
+
+    df['zero_columns'] = df['zero_columns'].apply(lambda x: 'none' if x is None else id2what(x)['origin'])
+
+    # Make missings sensible for grouping
 
     def fillna(df, column, value):
         df[column] = df[column].fillna(value=value)
 
     fillna(df, 'row_normalizer', 'none')
+
     fillna(df, 'fold_size', np.inf)
-    fillna(df, 'fold_seed', -1)
+    df['fold_size'] = df['fold_size'].apply(lambda x: int(x) if np.isfinite(x) else 2**32-1)
+
+    fillna(df, 'folder', 'none')
+
     fillna(df, 'allow_unseen_in_folding', False)
     fillna(df, 'binarize_threshold', np.inf)
+
+    df['is_counts'] = df['binarize_threshold'].apply(lambda x: x != 0)
+
     fillna(df, 'max_radius', np.inf)
     fillna(df, 'min_radius', -np.inf)
-    df['fold_seed'] = df['fold_seed'].astype(np.int)
-    df['fold_size'] = df['fold_size'].apply(lambda x: int(x) if np.isfinite(x) else 2**32-1)
-    df['is_counts'] = df['binarize_threshold'].apply(lambda x: x != 0)
 
     return human_sort_columns(df)
 
