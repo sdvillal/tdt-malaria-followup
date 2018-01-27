@@ -388,7 +388,7 @@ def run_one_exp(Xlab, y_lab,
     if not recompute:
         try:
             if ignore_existing and op.isfile(cache_path):
-                print('Ignoring %s')
+                print('Ignoring %s' % cache_path)
                 return None
             result = pd.read_pickle(cache_path)
             if 'fail' not in result:
