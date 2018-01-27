@@ -375,7 +375,7 @@ def run_one_exp(Xlab, y_lab,
     result = call_dict(ignores=('Xlab', 'y_lab',
                                 'Xunl', 'y_unl', 'i2m_unl',
                                 'hdf',
-                                'recompute', 'cache_dir',
+                                'ignore_existing', 'recompute', 'cache_dir',
                                 'model_stats', 'save_model', 'save_predictions'))
     # whatamise
     # FIXME: narrow down to proper key (recursively)
