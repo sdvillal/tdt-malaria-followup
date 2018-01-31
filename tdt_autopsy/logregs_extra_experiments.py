@@ -632,6 +632,8 @@ def human_sort_columns(df):
         'is_binary',
         'is_binary_counts',
         'is_regular_counts',
+        'unfolded',
+        'fold_as_binary',
         'allow_unseen_in_folding',
         'fold_size',
         'fold_seed',
