@@ -1,4 +1,7 @@
+from future.utils import string_types
+
 import pandas as pd
+import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from IPython.display import HTML, display
 from IPython import get_ipython
@@ -40,6 +43,8 @@ def show_df(df, index=False):
 # Show inline images
 
 def show_image(image, bgr=False):
+    if isinstance(image, string_types):
+        image = mpimg.imread(image)
     if bgr:
         image = image[:, :, ::-1]
     plt.imshow(image)
