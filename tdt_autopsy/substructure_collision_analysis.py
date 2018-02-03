@@ -12,7 +12,7 @@ from toolz import take
 import array
 import feather
 import numpy as np
-from scipy.sparse import vstack, coo_matrix
+from scipy.sparse import vstack, coo_matrix, csr_matrix
 import pandas as pd
 import numba
 import joblib
@@ -367,6 +367,38 @@ def rdkhash_feature_matrix(fpt='ecfp', dset='lab', num_shards=4, f2i=None, recom
 #     # noinspection PyTypeChecker
 #     i2m, i2f, X, y = rdkhash_feature_matrix(fpt=fpt, dset='scr', num_shards=4, f2i=i2f, recompute=False)
 # exit(22)
+
+
+def tall_fat_rdkhash_feature_matrix(fpt='ecfp'):
+
+    # Load all
+    _, _, Xlab, _ = rdkhash_feature_matrix(fpt=fpt, dset='lab')
+    _, _, Xamb, _ = rdkhash_feature_matrix(fpt=fpt, dset='amb')
+    _, _, Xunl, _ = rdkhash_feature_matrix(fpt=fpt, dset='unl')
+    _, _, Xscr, _ = rdkhash_feature_matrix(fpt=fpt, dset='scr')
+
+    # Get simple stats
+    num_mols = (Xlab.shape[0], Xamb.shape[0], Xunl.shape[0], Xscr.shape[0])
+    num_unique_cols = (
+        Xlab.shape[1],
+        Xlab.shape[1] - Xamb.shape[1],
+        Xunl.shape[1] - Xlab.shape[1] - Xamb.shape[1],
+        Xscr.shape[1] - Xunl.shape[1] - Xlab.shape[1] - Xamb.shape[1],
+    )
+
+    # Reshape
+
+    def reshape(X, shape):
+        return csr_matrix((X.data, X.indices, X.indptr), shape=shape)
+
+    Xlab = reshape(Xlab, (Xlab.shape[0], Xscr.shape[1]))
+    Xamb = reshape(Xamb, (Xamb.shape[0], Xscr.shape[1]))
+    Xunl = reshape(Xunl, (Xunl.shape[0], Xscr.shape[1]))
+
+    # Concat
+    Xall = vstack((Xlab, Xamb, Xunl, Xscr))
+
+    return Xall, num_mols, num_unique_cols
 
 
 def find_rdkhash_dataset_duplicates(fpt='ecfp', transductive=True, recompute=False):
