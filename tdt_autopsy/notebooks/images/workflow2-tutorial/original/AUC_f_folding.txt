@@ -1,0 +1,2 @@
+
+Average AUC over 10 folds CV for logistic regression built with l2=0.1 and automatic class weights. Different folding sizes were used for the fingerprints and are shown in a logarithmic scale.  

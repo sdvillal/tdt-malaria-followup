@@ -1,0 +1,3 @@
+
+Amount of mispredictions (given a score threshold of 0.5) for logistic regression, automatic class weights and l2=0.1 for different folding sizes, represented in a logarithmic scale.
+

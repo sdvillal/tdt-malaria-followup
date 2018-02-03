@@ -1,0 +1,2 @@
+
+Picture showing the different AUC values obtained in Logistic Regression (implemented in scikit-learn) with different values of L1 or L2 regularizations. In all cases the class weights were set to 'auto' and we used non-folded fingerprints (ECFPs and FCFPs) represented in a sparse format.
