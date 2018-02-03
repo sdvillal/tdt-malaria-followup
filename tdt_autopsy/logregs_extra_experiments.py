@@ -786,6 +786,47 @@ def tidy_results_01(cache_path=op.join(RESULTS_DIR, '01results', 'results.tidy.f
     return human_sort_columns(df)
 
 
+# --- Miscellaneous inspection tools
+
+def possible_enrichments(num_pos, num_total, at=0.05):
+    # Enrichment factor at x% is simply defined (at least in rdkit) as:
+    #   Enrichment = (num_pos_until_i / num_total_pos) * (num_molecules / i)
+    #   That is: fraction_positives / fraction_of_scanned_molecules
+    num_top_to_consider = int(round(num_total * at))
+    percentage_of_scanned_molecules = at
+    # All possible positives in the top of the ranking...
+    max_num_positives = min(num_pos, num_top_to_consider)
+    # All possible positives in the bottom of the ranking...
+    min_num_positives = max(0, num_pos - (num_total - num_top_to_consider))
+    enrichments = []
+    for pos in range(min_num_positives, max_num_positives):
+        percentage_of_positives = pos / num_pos
+        enrichments.append(percentage_of_positives / percentage_of_scanned_molecules)
+    return enrichments
+
+
+def duplicated_columns_get_the_same_weight(do_print=False):
+    # Flo does not believe that in logreg, as implemented, duplicated columns get the exact same weight...
+    i2m_lab, i2f_lab, f2i_lab, Xlab, y_lab = X_train_feats(fpt='ecfp', dsets='lab',
+                                                           use_representatives=False, transductive=False)
+
+    # Information about the features
+    hdf = munge_rdk_hashes_df(fpt='ecfp', nthreads=4, recompute=False, columns=['column', 'radius',
+                                                                                'representative_train',
+                                                                                'representative_transductive'])
+    hdf = hdf.query('column < %d' % Xlab.shape[1])
+
+    model = LOGREG_MODELS.tdt_l2(Xlab, y_lab, train=True)
+
+    coefs = model.coef_[0]
+
+    if do_print:
+        for r, columns in hdf.groupby('representative_train')['column']:
+            print(r, coefs[columns])
+
+    return coefs, hdf
+
+
 if __name__ == '__main__':
     compute_at_home()
     tidy_results(recompute=True).info()
